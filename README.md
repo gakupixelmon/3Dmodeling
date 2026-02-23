@@ -24,5 +24,5 @@ In this implementation, space is discretized into a 3D voxel grid. Each voxel is
 
 ### 1. Clone the repository
 ```bash
-git clone [https://github.com/yourusername/your-repo-name.git](https://github.com/yourusername/your-repo-name.git)
-cd your-repo-name
+git clone [https://github.com/gakupixelmon/3Dmodeling.git](https://github.com/gakupixelmon/3Dmodeling.git)
+cd 3Dmodeling
