@@ -8,9 +8,7 @@ Heavy deep learning frameworks like PyTorch are **not required** for the core 3D
 ## Features
 * **Fast 3D Generation**: Generates 3D mesh data using the Marching Cubes algorithm.
 * **Automatic Background Removal**: Integrates `rembg` to automatically extract object silhouettes.
-* **Two Modes**:
-  * `main.py`: 2-view reconstruction (Front and Left views).
-  * `main3.py`: 3-view reconstruction (Front, Left, and Top views) for higher accuracy.
+
 * **FastAPI Backend**: Ready-to-use asynchronous API with CORS enabled.
 
 ## Algorithm Overview
