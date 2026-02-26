@@ -45,6 +45,4 @@ pip install fastapi uvicorn python-multipart numpy opencv-python trimesh scikit-
 uvicorn main:app --reload
 ```
 ### 5. Access via Browser
-```bash
 Once the server is running, open your browser and go to the following URL. You can test the 3D model generation through an intuitive UI:
-```
