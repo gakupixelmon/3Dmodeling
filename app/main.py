@@ -245,3 +245,8 @@ async def generate_model(
     os.remove(top_path)
 
     return {"glb_url": glb_url}
+from fastapi.responses import FileResponse
+@app.get("/")
+async def read_index():
+    return FileResponse("static/index.html")
+app.mount("/static", StaticFiles(directory="static"), name="static")
