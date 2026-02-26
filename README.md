@@ -23,4 +23,21 @@ In this implementation, space is discretized into a 3D voxel grid. Each voxel is
 ### 1. Clone the repository
 ```bash
 git clone [https://github.com/gakupixelmon/3Dmodeling.git](https://github.com/gakupixelmon/3Dmodeling.git)
-cd 3Dmodeling
+cd 3Dmodeling```
+### 2. Create and Activate a Virtual Environment (Recommended)
+windows
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+macOS, Linux
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+### 3. Install Dependencies
+pip install fastapi uvicorn python-multipart numpy opencv-python trimesh scikit-image rembg Pillow
+### 4. Start the Application
+uvicorn main:app --reload
+### 5. Access via Browser
+Once the server is running, open your browser and go to the following URL. You can test the 3D model generation through an intuitive UI:
