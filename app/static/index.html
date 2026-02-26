@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Generator</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        canvas {
+            border: 1px solid #999;
+            max-width: 100%;
+            cursor: crosshair;
+            margin-top: 10px;
+            background-color: #f9f9f9;
+        }
+
+        .instructions {
+            font-size: 0.9em;
+            color: #555;
+            text-align: left;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .color-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        #submit-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #submit-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        #result-container {
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+        }
+
+        model-viewer {
+            width: 100%;
+            height: 500px;
+            background-color: #eee;
+            border-radius: 8px;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Interactive Visual Hull 3D Generator</h1>
+    <p>画像をアップロードし、画像上をクリックして基準点を指定してください。各画像で対応する点の色が同じになります。</p>
+
+    <div class="grid">
+        <div class="card">
+            <h3>1. Front Image</h3>
+            <div class="instructions">
+                <strong>4点</strong>クリックしてください。<br>
+                <span class="color-dot" style="background: #FF3B30;"></span>1. 基準A (例:上)<br>
+                <span class="color-dot" style="background: #007AFF;"></span>2. 基準B (例:下)<br>
+                <span class="color-dot" style="background: #34C759;"></span>3. 基準C (例:左)<br>
+                <span class="color-dot" style="background: #FF9500;"></span>4. 基準D (例:右)
+            </div>
+            <input type="file" id="file-front" accept="image/*" onchange="loadImage('front', this)">
+            <br>
+            <canvas id="canvas-front"></canvas>
+            <p>打った点: <span id="count-front">0</span>/4</p>
+            <button onclick="clearPoints('front')">点をリセット</button>
+        </div>
+
+        <div class="card">
+            <h3>2. Left Image</h3>
+            <div class="instructions">
+                <strong>2点</strong>クリックしてください。<br>
+                正面の1, 2番目と同じ箇所を指定します。<br>
+                <span class="color-dot" style="background: #FF3B30;"></span>1. 基準A (例:上)<br>
+                <span class="color-dot" style="background: #007AFF;"></span>2. 基準B (例:下)
+            </div>
+            <input type="file" id="file-left" accept="image/*" onchange="loadImage('left', this)">
+            <br>
+            <canvas id="canvas-left"></canvas>
+            <p>打った点: <span id="count-left">0</span>/2</p>
+            <button onclick="clearPoints('left')">点をリセット</button>
+        </div>
+
+        <div class="card">
+            <h3>3. Top Image</h3>
+            <div class="instructions">
+                <strong>2点</strong>クリックしてください。<br>
+                正面の3, 4番目と同じ箇所を指定します。<br>
+                <span class="color-dot" style="background: #34C759;"></span>1. 基準C (例:左)<br>
+                <span class="color-dot" style="background: #FF9500;"></span>2. 基準D (例:右)
+            </div>
+            <input type="file" id="file-top" accept="image/*" onchange="loadImage('top', this)">
+            <br>
+            <canvas id="canvas-top"></canvas>
+            <p>打った点: <span id="count-top">0</span>/2</p>
+            <button onclick="clearPoints('top')">点をリセット</button>
+        </div>
+    </div>
+
+    <button id="submit-btn" onclick="generateModel()">3Dモデルを生成する</button>
+    <div id="loading" class="loading">モデルを生成中... 数十秒かかる場合があります...</div>
+
+    <div id="result-container">
+        <h2>生成結果</h2>
+        <model-viewer id="viewer" alt="Generated 3D model" auto-rotate camera-controls></model-viewer>
+        <br>
+        <a id="download-link" href="#" download>GLBファイルをダウンロード</a>
+    </div>
+
+    <script>
+        const state = {
+            front: { file: null, img: null, points: [], maxPoints: 4 },
+            left: { file: null, img: null, points: [], maxPoints: 2 },
+            top: { file: null, img: null, points: [], maxPoints: 2 }
+        };
+
+        // 点のカラーパレット: 1=赤, 2=青, 3=緑, 4=オレンジ
+        const pointColors = ['#FF3B30', '#007AFF', '#34C759', '#FF9500'];
+
+        function loadImage(view, input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                state[view].file = file;
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        state[view].img = img;
+                        clearPoints(view);
+                    }
+                    img.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function drawCanvas(view) {
+            const canvas = document.getElementById(`canvas-${view}`);
+            const ctx = canvas.getContext('2d');
+            const img = state[view].img;
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            state[view].points.forEach((p, index) => {
+                const x = p.x * canvas.width;
+                const y = p.y * canvas.height;
+
+                // ビューに応じて色を決定する
+                let colorIndex = index;
+                if (view === 'top') {
+                    // topの場合は3, 4番目の色（インデックス2, 3）を使用
+                    colorIndex = index + 2;
+                }
+
+                ctx.fillStyle = pointColors[colorIndex];
+
+                // 点を描画
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 白い縁取りをつけて画像に埋もれないようにする
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.stroke();
+
+                // 点の番号を描画（シャドウをつけて見やすく）
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.shadowColor = "black";
+                ctx.shadowBlur = 4;
+                ctx.fillText(index + 1, x + 10, y - 10);
+
+                // シャドウ設定をリセット
+                ctx.shadowBlur = 0;
+            });
+
+            document.getElementById(`count-${view}`).innerText = state[view].points.length;
+        }
+
+        function clearPoints(view) {
+            state[view].points = [];
+            if (state[view].img) drawCanvas(view);
+            else document.getElementById(`count-${view}`).innerText = "0";
+        }
+
+        ['front', 'left', 'top'].forEach(view => {
+            const canvas = document.getElementById(`canvas-${view}`);
+            canvas.addEventListener('click', function (e) {
+                if (!state[view].img) return;
+                if (state[view].points.length >= state[view].maxPoints) return;
+
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+
+                state[view].points.push({
+                    x: x / canvas.width,
+                    y: y / canvas.height
+                });
+
+                drawCanvas(view);
+            });
+        });
+
+        async function generateModel() {
+            if (!state.front.file || state.front.points.length !== 4) return alert("正面画像を設定し、4点クリックしてください。");
+            if (!state.left.file || state.left.points.length !== 2) return alert("側面画像を設定し、2点クリックしてください。");
+            if (!state.top.file || state.top.points.length !== 2) return alert("上面画像を設定し、2点クリックしてください。");
+
+            const btn = document.getElementById('submit-btn');
+            const loading = document.getElementById('loading');
+            const resultContainer = document.getElementById('result-container');
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('image1', state.front.file);
+            formData.append('image2', state.left.file);
+            formData.append('image3', state.top.file);
+            formData.append('points1', JSON.stringify(state.front.points));
+            formData.append('points2', JSON.stringify(state.left.points));
+            formData.append('points3', JSON.stringify(state.top.points));
+
+            try {
+                const response = await fetch('/generate', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error("サーバーエラーが発生しました。");
+
+                const data = await response.json();
+
+                const viewer = document.getElementById('viewer');
+                viewer.src = data.glb_url;
+
+                const downloadLink = document.getElementById('download-link');
+                downloadLink.href = data.glb_url;
+
+                resultContainer.style.display = 'block';
+            } catch (error) {
+                console.error(error);
+                alert("エラー: " + error.message);
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+
+</html>
