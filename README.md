@@ -37,8 +37,14 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 ### 3. Install Dependencies
+```bash
 pip install fastapi uvicorn python-multipart numpy opencv-python trimesh scikit-image rembg Pillow
+```
 ### 4. Start the Application
+```bash
 uvicorn main:app --reload
+```
 ### 5. Access via Browser
+```bash
 Once the server is running, open your browser and go to the following URL. You can test the 3D model generation through an intuitive UI:
+```
