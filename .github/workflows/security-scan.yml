@@ -1,0 +1,43 @@
+name: Security Scan and SBOM Generation
+
+# 1. ワークフローのトリガー（いつ実行するか）
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest # 実行環境
+
+    steps:
+      # 2. リポジトリのコードを取得
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 3. Trivyによる脆弱性スキャン（ターミナル出力用）
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      # 4. TrivyによるSBOM（ソフトウェア部品表）の生成
+      - name: Generate SBOM
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'cyclonedx'
+          output: 'sbom.json'
+
+      # 5. 生成したSBOMファイルの保存（成果物のアップロード）
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-artifact
+          path: sbom.json
